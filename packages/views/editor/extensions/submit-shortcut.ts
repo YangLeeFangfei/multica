@@ -25,8 +25,13 @@ export function createSubmitExtension(
           // (Chinese pinyin, Japanese kana, etc). `view.composing` is set
           // by ProseMirror between compositionstart and compositionend.
           if (editor.view.composing) return false;
-          // Let Enter insert a newline inside a code block.
-          if (editor.isActive("codeBlock")) return false;
+          // Let structured editor blocks keep their native Enter behavior
+          // (new code line, next list item, continuing/exiting quote).
+          if (
+            editor.isActive("codeBlock") ||
+            editor.isActive("listItem") ||
+            editor.isActive("blockquote")
+          ) return false;
           return onSubmit();
         };
       }

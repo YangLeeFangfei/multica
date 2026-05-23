@@ -50,18 +50,22 @@ vi.mock("../../editor", () => ({
     props: {
       defaultValue?: string;
       onUpdate?: (md: string) => void;
+      onSubmit?: () => void;
       placeholder?: string;
       onUploadFile?: (file: File) => Promise<UploadResult | null>;
       mentionMode?: string;
       mentionContextItems?: unknown[];
+      submitOnEnter?: boolean;
     },
     ref: React.Ref<unknown>,
   ) {
     const {
       defaultValue,
       onUpdate,
+      onSubmit,
       placeholder,
       onUploadFile,
+      submitOnEnter,
     } = props;
     editorProps.last = props as unknown as Record<string, unknown>;
     const valueRef = useRef<string>(defaultValue ?? "");
@@ -103,6 +107,16 @@ vi.mock("../../editor", () => ({
         onChange={(e) => {
           valueRef.current = e.target.value;
           onUpdate?.(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          if (!e.shiftKey && submitOnEnter) {
+            e.preventDefault();
+            onSubmit?.();
+            return;
+          }
+          valueRef.current += "\n";
+          onUpdate?.(valueRef.current);
         }}
       />
     );
@@ -178,6 +192,28 @@ describe("ChatInput @ context wiring", () => {
 });
 
 describe("ChatInput attachment wiring", () => {
+  it("sends the chat message when Enter is pressed", async () => {
+    const onSend = vi.fn();
+    renderInput({ onSend });
+
+    const editor = screen.getByTestId("editor");
+    fireEvent.change(editor, { target: { value: "hello agent" } });
+    fireEvent.keyDown(editor, { key: "Enter" });
+
+    expect(onSend).toHaveBeenCalledWith("hello agent", undefined);
+  });
+
+  it("keeps Shift+Enter available for a newline without sending", () => {
+    const onSend = vi.fn();
+    renderInput({ onSend });
+
+    const editor = screen.getByTestId("editor");
+    fireEvent.change(editor, { target: { value: "hello" } });
+    fireEvent.keyDown(editor, { key: "Enter", shiftKey: true });
+
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it("routes dropped files through the editor's upload handler", async () => {
     const { onUploadFile } = renderInput();
     expect(dropHandlers.onDrop).not.toBeNull();

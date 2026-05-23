@@ -13,7 +13,7 @@ import { FileUploadButton } from "@multica/ui/components/common/file-upload-butt
 import { SubmitButton } from "@multica/ui/components/common/submit-button";
 import { useChatStore, DRAFT_NEW_SESSION } from "@multica/core/chat";
 import { createLogger } from "@multica/core/logger";
-import { enterKey, formatShortcut, modKey } from "@multica/core/platform";
+import { enterKey, formatShortcut } from "@multica/core/platform";
 import type { UploadResult } from "@multica/core/hooks/use-file-upload";
 import type { MentionItem } from "../../editor/extensions/mention-suggestion";
 import { useT } from "../../i18n";
@@ -184,7 +184,7 @@ export function ChatInput({
     // resolves later) and the attachment would only end up bound to the
     // session, not the message — the agent then can't `multica attachment
     // download <id>` the file. The SubmitButton is also disabled in this
-    // state via `uploading`, but Mod+Enter bypasses the button so we
+    // state via `uploading`, but keyboard submit bypasses the button so we
     // still gate here.
     if (editorRef.current?.hasActiveUploads()) {
       logger.debug("input.send skipped: uploads in flight");
@@ -278,6 +278,7 @@ export function ChatInput({
               setInputDraft(draftKey, md);
             }}
             onSubmit={handleSend}
+            submitOnEnter
             onUploadFile={uploadEnabled ? handleUpload : undefined}
             debounceMs={100}
             mentionMode={contextItems ? "context" : "default"}
@@ -286,11 +287,8 @@ export function ChatInput({
             // Chat is short-form — the floating formatting toolbar is
             // more distraction than feature here.
             showBubbleMenu={false}
-            // Chat intentionally leaves submitOnEnter at its default false:
-            // Mod+Enter submits, while bare Enter falls through to Tiptap's
-            // default behavior for lists, quotes, and paragraph breaks.
-            // Without this, Enter-as-send would steal the only key that
-            // continues a bullet list, leaving users stuck after one item.
+            // Chat-style composer: Enter submits, Shift+Enter keeps the
+            // editor's newline/hard-break behavior.
           />
         </div>
         {leftAdornment && (
@@ -310,7 +308,7 @@ export function ChatInput({
             disabled={isEmpty || isSubmitting || !!disabled || !!noAgent || pendingUploads > 0}
             running={isRunning}
             onStop={onStop}
-            tooltip={`${t(($) => $.input.send_tooltip)} · ${formatShortcut(modKey, enterKey)}`}
+            tooltip={`${t(($) => $.input.send_tooltip)} · ${formatShortcut(enterKey)}`}
             stopTooltip={t(($) => $.input.stop_tooltip)}
           />
         </div>

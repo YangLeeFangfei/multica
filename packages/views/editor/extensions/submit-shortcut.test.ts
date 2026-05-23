@@ -87,4 +87,32 @@ describe("createSubmitExtension", () => {
     expect(shortcuts.Enter!()).toBe(false);
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("Enter is suppressed inside a list item", () => {
+    const onSubmit = vi.fn(() => true);
+    const shortcuts = getShortcuts(
+      createSubmitExtension(onSubmit, { submitOnEnter: true }),
+      {
+        view: { composing: false } as unknown as Editor["view"],
+        isActive: (name: string) => name === "listItem",
+      },
+    );
+
+    expect(shortcuts.Enter!()).toBe(false);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("Enter is suppressed inside a blockquote", () => {
+    const onSubmit = vi.fn(() => true);
+    const shortcuts = getShortcuts(
+      createSubmitExtension(onSubmit, { submitOnEnter: true }),
+      {
+        view: { composing: false } as unknown as Editor["view"],
+        isActive: (name: string) => name === "blockquote",
+      },
+    );
+
+    expect(shortcuts.Enter!()).toBe(false);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });

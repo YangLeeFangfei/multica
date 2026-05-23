@@ -35,13 +35,17 @@ vi.mock("../../editor", () => ({
     {
       defaultValue,
       onUpdate,
+      onSubmit,
       placeholder,
       onUploadFile,
+      submitOnEnter,
     }: {
       defaultValue?: string;
       onUpdate?: (markdown: string) => void;
+      onSubmit?: () => void;
       placeholder?: string;
       onUploadFile?: (file: File) => Promise<UploadResult | null>;
+      submitOnEnter?: boolean;
     },
     ref: Ref<unknown>,
   ) {
@@ -71,6 +75,16 @@ vi.mock("../../editor", () => ({
         onChange={(event) => {
           valueRef.current = event.target.value;
           onUpdate?.(event.target.value);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          if (!event.shiftKey && submitOnEnter) {
+            event.preventDefault();
+            onSubmit?.();
+            return;
+          }
+          valueRef.current += "\n";
+          onUpdate?.(valueRef.current);
         }}
       />
     );
@@ -183,5 +197,42 @@ describe("comment composers", () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith("thread reply", undefined, undefined);
     });
+  });
+
+  it("submits a top-level comment when Enter is pressed", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    renderCommentInput(onSubmit);
+
+    const editor = screen.getByTestId("editor");
+    fireEvent.change(editor, { target: { value: "new comment" } });
+    fireEvent.keyDown(editor, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith("new comment", undefined, undefined);
+    });
+  });
+
+  it("submits a reply when Enter is pressed", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    renderReplyInput({ onSubmit });
+
+    const editor = screen.getByTestId("editor");
+    fireEvent.change(editor, { target: { value: "reply comment" } });
+    fireEvent.keyDown(editor, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith("reply comment", undefined, undefined);
+    });
+  });
+
+  it("keeps Shift+Enter available for a newline without submitting", () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    renderCommentInput(onSubmit);
+
+    const editor = screen.getByTestId("editor");
+    fireEvent.change(editor, { target: { value: "new comment" } });
+    fireEvent.keyDown(editor, { key: "Enter", shiftKey: true });
+
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });
